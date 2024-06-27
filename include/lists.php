@@ -75,62 +75,51 @@ function lists($htmls) {
 		}
 	}
 }
-function listjson()
-{
-    global $DB;
-    $groups = $DB->query("SELECT * FROM `lylme_groups` ORDER BY `group_order` ASC");
-    // 获取分类
-    $i = 0;
-    $g = 0;
-    $arr = array();
-    //初始化循环次数
-    while ($group = $DB->fetch($groups)) {
-        //循环所有分组
-        if($group["group_status"] == '0') {
-            continue;
-        }
-        if(!in_array($group['group_pwd'], $_SESSION['list']) && !empty($group['group_pwd'])) {
-            //如果 分组加密未在认证列表 并且分组设置了密码(不显示分组)
-            continue;
-        }
-        $sql = "SELECT * FROM `lylme_links` WHERE `group_id` = " . $group['group_id'] . " ORDER BY `link_order` ASC;";
-        $group_links = $DB->query($sql);
-        $link_num = $DB->num_rows($group_links);
-        // 获取返回字段条目数量
-        $arr[$g] = array("id" => $group['group_id'],"title" => $group['group_name'],"icon" => $group['group_icon'],);
-        //输出分组图标和标题
-
-        while ($link = $DB->fetch($group_links)) {
-            // 循环每个链接
-            $arr[$g]['items'][] = array("id" => $link['id'],
-            "title" => $link['name'],
-            "alias" => 'link'.$link['id'],
-            "keyword" => $link['name'],
-            "category_id" => $group['group_id'],
-            "icon" => $link['icon'],
-            "url" =>$link['url'],
-            "out" => true);
-            // 返回指定分组下的所有字段
-            $lpwd = true;
-            if ($link_num > $i) {
-                $i = $i + 1;
-                if(!empty($group['group_pwd']) && !empty($link['link_pwd'])) {
-                    //分组和链接同时加密
-                    //忽略链接加密正常显示分组
-                } elseif(!in_array($link['link_pwd'], $_SESSION['list']) && !empty($link['link_pwd'])) {
-                    //当前链接加密
-                    $lpwd = false;
-                }
-                if($link['link_status'] && $lpwd) {
-                    
-                }
-                //输出图标和链接
-            }
-        }
-        $g++;
-    }
-    return $arr;
+//修复禁用链接显示
+function listjson() {  
+    global $DB;  
+    $groups = $DB->query("SELECT * FROM `lylme_groups` ORDER BY `group_order` ASC");  
+    $arr = array();  
+    $g = 0;  
+    while ($group = $DB->fetch($groups)) {  
+        if ($group["group_status"] == '0') {  
+            continue;  
+        }  
+        if (!empty($group['group_pwd']) && !in_array($group['group_pwd'], $_SESSION['list'])) {  
+            continue;  
+        }  
+        $sql = "SELECT * FROM `lylme_links` WHERE `group_id` = " . $group['group_id'] . " ORDER BY `link_order` ASC;";  
+        $group_links = $DB->query($sql);  
+  
+        $arr[$g] = array(  
+            "id" => $group['group_id'],  
+            "title" => $group['group_name'],  
+            "icon" => $group['group_icon'],  
+            "items" => array()  
+        );  
+        while ($link = $DB->fetch($group_links)) {  
+            $lpwd = true;  
+            if (!empty($link['link_pwd']) && !in_array($link['link_pwd'], $_SESSION['list'])) {  
+                $lpwd = false;  
+            }  
+            if ($link['link_status'] == '1' && $lpwd) {  
+                $arr[$g]['items'][] = array(  
+                    "id" => $link['id'],  
+                    "title" => $link['name'],  
+                    "alias" => 'link' . $link['id'],  
+                    "keyword" => $link['name'],  
+                    "category_id" => $group['group_id'],  
+                    "icon" => $link['icon'],  
+                    "url" => $link['url'],  
+                    "out" => true  
+                );  
+            }  
+        }  
+        $g++;  
+    }  
+    return $arr;  
 }
+
 function strexists($string, $find)
 {
     return !(strpos($string, $find) === false);
